@@ -6,15 +6,18 @@ from __future__ import division
 import numpy as np
 import copy as cp
 
+import matplotlib.pyplot as plt
+
+np.random.seed(555) #for reproducibility
+
 def main():
 
     #hyperparameters
-    num_samples = 500
-    eps = 0.75 #leapfrog step size
-    L = 1000 #leapfrog steps per iteration
+    num_samples = 1000
+    eps = 0.1 #leapfrog step size
 
     #initial conditions
-    q_init = 0.5
+    q_init = -0.5
     #p = -0.5
 
     def U(q):
@@ -22,18 +25,37 @@ def main():
     def grad_U(q):
         return q
 
+    L_trials = xrange(100, 5001, 100)
+    mean_list, var_list = [], []
+    for L in L_trials:
+        print "generating samples for L=%d" % L
+        s = generate_HMC_samples(U, grad_U, eps, L, q_init, num_samples)
+        mean_list.append(mean(s))
+        var_list.append(variance(s))
+
+    plt.figure(1)
+    plt.subplot(211)
+    plt.title('Mean')
+    plt.ylabel('Mean')
+    plt.grid(True)
+    plt.plot(L_trials, mean_list, 'bo--')
+
+    plt.subplot(212)
+    plt.title('Variance')
+    plt.ylabel('Variance')
+    plt.xlabel('Leapfrog steps')
+    plt.grid(True)
+    plt.plot(L_trials, var_list, 'ro--')
+    plt.show()
+
+def generate_HMC_samples(U, grad_U, eps, L, q_init, num_samples):
+
     sample_chain = []
     for _ in xrange(num_samples):
         q_new = HMC(U, grad_U, eps, L, q_init, 1)
         sample_chain.append(float(q_new))
 
-    print "HMC mean:", mean(sample_chain)
-    print "HMC variance:", variance(sample_chain)
-
-    ideal_chain = np.random.normal(0, 1, num_samples)
-
-    print "mean:", mean(ideal_chain)
-    print "variance:", variance(ideal_chain)
+    return sample_chain
 
 def HMC(U, grad_U, epsilon, L, current_q, dim):
     q = cp.copy(current_q)
