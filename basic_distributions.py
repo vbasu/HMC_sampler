@@ -5,6 +5,7 @@ An HMC sampler for conditional_energy_data in mirt_util.py
 from __future__ import division
 import numpy as np
 import copy as cp
+import cPickle as pickle
 
 import matplotlib.pyplot as plt
 
@@ -14,39 +15,36 @@ def main():
 
     #hyperparameters
     num_samples = 1000
-    eps = 0.1 #leapfrog step size
+    #eps = 0.25 #leapfrog step size
 
     #initial conditions
     q_init = -0.5
-    #p = -0.5
 
     def U(q):
         return q**2 / 2
     def grad_U(q):
         return q
 
+    lookup_matrix = []
     L_trials = xrange(100, 5001, 100)
-    mean_list, var_list = [], []
-    for L in L_trials:
-        print "generating samples for L=%d" % L
-        s = generate_HMC_samples(U, grad_U, eps, L, q_init, num_samples)
-        mean_list.append(mean(s))
-        var_list.append(variance(s))
+    #eps_trials = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2,
+    #        1.3, 1.4, 1.5]
+    eps_trials = [1.6, 1.7, 1.8, 1.9, 2.0]
+    num_L_trials = len(L_trials)
+    num_eps_trials = len(eps_trials)
+    #populate the lookup matrix
+    lookup_matrix = [[(eps,L) for L in L_trials] for eps in
+            eps_trials]
+    data = [[0 for i in xrange(num_L_trials)] for j in xrange(num_eps_trials)]
 
-    plt.figure(1)
-    plt.subplot(211)
-    plt.title('Mean')
-    plt.ylabel('Mean')
-    plt.grid(True)
-    plt.plot(L_trials, mean_list, 'bo--')
+    for i in xrange(num_eps_trials):
+        print "generating samples for eps=%f ..." % eps_trials[i]
+        for j in xrange(num_L_trials):
+            eps, L = lookup_matrix[i][j]
+            data[i][j] = generate_HMC_samples(U, grad_U, eps, L, q_init, num_samples)
 
-    plt.subplot(212)
-    plt.title('Variance')
-    plt.ylabel('Variance')
-    plt.xlabel('Leapfrog steps')
-    plt.grid(True)
-    plt.plot(L_trials, var_list, 'ro--')
-    plt.show()
+    pickle.dump(data, open("sample_matrix_2.pkl", 'wb'))
+    pickle.dump(lookup_matrix, open("lookup_matrix_2.pkl", 'wb'))
 
 def generate_HMC_samples(U, grad_U, eps, L, q_init, num_samples):
 
@@ -96,6 +94,8 @@ def variance(samples):
     var /= len(samples)
     return var
 
+def KS_test(s1, s2):
+    pass
 
 if __name__ == "__main__":
     main()
